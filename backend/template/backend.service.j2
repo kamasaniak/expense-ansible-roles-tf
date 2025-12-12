@@ -9,3 +9,20 @@ SyslogIdentifier=backend
 
 [Install]
 WantedBy=multi-user.target
+
+[Unit]
+Description=Backend Service
+After=network.target
+
+[Service]
+User=expense
+Environment=ENV={{ ENVIRONMENT }}
+WorkingDirectory=/app
+ExecStart=/bin/node /app/index.js
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=backend
+
+[Install]
+WantedBy=multi-user.target
