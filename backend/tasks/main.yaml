@@ -4,34 +4,57 @@
 - name: enable nodejs 20
   ansible.builtin.command: dnf module enable nodejs:20 -y
 
-- name: install nodejs
+- name: install nodejs and mysql client
   ansible.builtin.package:
     name: "{{ item }}"
     state: present
   loop:
-  - nodejs
-  - mysql
+    - nodejs
+    - mysql
 
 - name: create expense user
   ansible.builtin.user:
     name: expense
 
 - name: include from common role
-  # tags: 
-  # - deployment
   include_role:
     name: common
     tasks_from: main
 
 
+# --------------------------------------------
+#  FIX: THESE 3 TASKS WERE MISSING
+# --------------------------------------------
+
+- name: create app directory
+  ansible.builtin.file:
+    path: /app
+    state: directory
+
+- name: download backend code
+  ansible.builtin.get_url:
+    url: "https://expense-builds.s3.us-east-1.amazonaws.com/expense-backend-v2.zip"
+    dest: /tmp/backend.zip
+
+- name: unzip backend code
+  ansible.builtin.unarchive:
+    src: /tmp/backend.zip
+    dest: /app
+    remote_src: true
+
+
+# --------------------------------------------
+# Continue remaining tasks
+# --------------------------------------------
+
 - name: Install dependencies
-  tags: 
-  - deployment
+  tags:
+    - deployment
   community.general.npm:
     path: /app
 
 - name: copy backend service
-  ansible.builtin.template: #it will search in templates folder
+  ansible.builtin.template:
     src: backend.service.j2
     dest: /etc/systemd/system/backend.service
 
@@ -40,8 +63,8 @@
     name: "{{ item }}"
     executable: pip3.9
   loop:
-  - cryptography
-  - PyMySQL
+    - cryptography
+    - PyMySQL
 
 - name: import mysql data
   community.mysql.mysql_db:
@@ -53,8 +76,8 @@
     target: /app/schema/backend.sql
 
 - name: daemon reload and restart service
-  tags: 
-  - deployment
+  tags:
+    - deployment
   ansible.builtin.systemd_service:
     enabled: true
     state: restarted
